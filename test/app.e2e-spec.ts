@@ -1,10 +1,10 @@
-import { INestApplication, INestMicroservice } from "@nestjs/common";
+import { INestApplication, INestMicroservice } from '@nestjs/common';
 import * as request from 'supertest';
-import { ClientProxyFactory, Transport } from "@nestjs/microservices";
-import { Test, TestingModule } from "@nestjs/testing";
-import { UserRoutesController } from "../src/app.controller";
-import { CreateUserDto } from "../src/dto/create-user.dto";
-import { UserController } from "./microserviceMock.controller";
+import { ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { Test, TestingModule } from '@nestjs/testing';
+import { UserRoutesController } from '../src/app.controller';
+import { CreateUserDto } from '../src/dto/create-user.dto';
+import { UserController } from './microserviceMock.controller';
 
 const createMicroservicesApp = async () => {
   const fixture: TestingModule = await Test.createTestingModule({
@@ -48,19 +48,13 @@ const createApp = async () => {
 describe('User App (e2e)', () => {
   let app: INestApplication;
   let service: INestMicroservice;
-  let userController: UserController;
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  beforeAll(async () => {
+  beforeEach(async () => {
     service = await createMicroservicesApp();
-    userController = service.get<UserController>(UserController);
     app = await createApp();
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await Promise.all([app.close(), service.close()]);
     jest.clearAllMocks();
   });
@@ -71,7 +65,8 @@ describe('User App (e2e)', () => {
       name: 'Jimmy cool af',
     };
 
-    it('create User', async () => {
+    it('create User and call microservice', async () => {
+      const userController = service.get<UserController>(UserController);
       const spied = jest.spyOn(userController, 'createUser');
       const res = await request(app.getHttpServer())
         .post('/user')
@@ -79,6 +74,16 @@ describe('User App (e2e)', () => {
       const { userId } = res.body;
       expect(userId.length).toEqual(10);
       expect(spied).toHaveBeenCalled();
+    });
+
+    it('create User and console.log is called', async () => {
+      console.log = jest.fn();
+      const res = await request(app.getHttpServer())
+        .post('/user')
+        .send(fakeUser);
+      const { userId } = res.body;
+      expect(userId.length).toEqual(10);
+      expect(console.log).toHaveBeenCalledWith('user.created');
     });
   });
 });
